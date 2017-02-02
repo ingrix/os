@@ -1,3 +1,4 @@
+#include <string.h>
 #include <vga.h>
 
 static size_t term_row;
@@ -52,34 +53,59 @@ void vga_next_char() {
   }
 }
 
-void vga_print_char(char c, uint8_t color) {
+void vga_prev_char() {
+  if(term_col-- == 0) {
+    term_col = VGA_WIDTH - 1;
+    if(term_row-- == 0) {
+      term_row = VGA_HEIGHT - 1;
+    }
+  }
+}
+
+void vga_putchar_color(char c, uint8_t color) {
   uint16_t *vga_buff = (uint16_t*)VGA_ADDR;
 
   switch(c) {
     case '\n' :
       vga_next_line();
       return;
+    case 0x08 : // backspace
+      vga_prev_char();
+      vga_buff[term_row * VGA_WIDTH + term_col] = vga_entry(' ', color);
+      return;
     default :
-      vga_buff[term_row * VGA_WIDTH + term_col] = vga_entry(c, color);
+      if(c < 127 && c > 31) {
+        vga_buff[term_row * VGA_WIDTH + term_col] = vga_entry(c, color);
+      } else {
+        vga_buff[term_row * VGA_WIDTH + term_col] = vga_entry('.', color);
+      }
   }
 
   vga_next_char();
-
 }
-void vga_print_msg(const char *msg, uint8_t color) {
+
+void vga_putchar(char c) {
+  vga_putchar_color(c, VGA_DEFAULT_COLOR);
+}
+
+void vga_puts_color(const char *msg, uint8_t color) {
   if(!msg) {
     return;
   }
-  for( ; *msg; msg++) {
-    vga_print_char(*msg, color);
+  for( ; *msg; ++msg) {
+    vga_putchar_color(*msg, color);
   }
+}
+
+void vga_puts(const char *msg) {
+  vga_puts_color(msg, VGA_DEFAULT_COLOR);
 }
 
 void vga_clear_screen(uint8_t color) {
   vga_set_row(0);
   vga_set_col(0);
   for(int i=0; i < VGA_WIDTH * VGA_HEIGHT; ++i) {
-    vga_print_char(' ', color);
+    vga_putchar_color(' ', color);
   }
 }
 

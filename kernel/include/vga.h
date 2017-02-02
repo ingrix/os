@@ -1,10 +1,9 @@
 #ifndef __K_VGA_H__
 #define __K_VGA_H__
 
-#include <stdint.h>
-#include <stddef.h>
+#include <kernel.h>
 
-#define VGA_ADDR 0xB8000
+#define VGA_ADDR (uint16_t*)0xB8000
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
 #define TERM_DEFAULT_FG 0x0F
@@ -12,6 +11,8 @@
 
 #define VGA_FG(x) ((x) & 0x0F)
 #define VGA_BG(x) ((x) & 0xF)
+
+#define VGA_DEFAULT_COLOR vga_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK)
 
 enum vga_color {
 	VGA_COLOR_BLACK = 0,
@@ -39,7 +40,9 @@ size_t vga_get_row();
 size_t vga_get_col(); 
 uint8_t vga_color(uint8_t fg, uint8_t bg);
 void vga_clear_screen(uint8_t color);
-void vga_print_msg(const char *msg, uint8_t color);
-void vga_print_char(char c, uint8_t color);
+void vga_puts_color(const char *msg, uint8_t color);
+void vga_puts(const char *msg);
+void vga_putchar_color(char c, uint8_t color);
+void vga_putchar(char c);
 
 #endif // __K_VGA_H__

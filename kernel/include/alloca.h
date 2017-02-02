@@ -1,8 +1,7 @@
 #ifndef __K_ALLOCA_H__
 #define __K_ALLOCA_H__
 
-#include <stdint.h>
-#include <stddef.h>
+#include <kernel.h>
 
 void* alloca(size_t size);
 

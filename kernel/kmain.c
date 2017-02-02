@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <printk.h>
 
 #ifdef __linux__
 #error "Cross compiler is needed to build this kernel"
@@ -15,17 +16,19 @@
 
 #include <boot.h>
 #include <vga.h>
-
-#define MULTIBOOT_MAGIC 0x2BADB002
-
+#include <string.h>
+#include <multiboot.h>
 
 int kmain(uint32_t magic, uint32_t mboot_info) {
   vga_term_init();
-  if(magic != MULTIBOOT_MAGIC) {
-    vga_print_msg("kernel must be booted with multiboot! hanging.", 
-        vga_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK));
+
+  if(!multiboot_check(magic)) {
+    printk("kernel must be booted with multiboot! hanging.");
     khang(); // hang
   }
-  vga_print_msg("kernel initialized\nbooting", vga_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK));
+
+  puts("booting\n");
+  multiboot_init(mboot_info);
+
   return 0;
 }

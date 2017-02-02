@@ -148,7 +148,7 @@ int strncmp(const char *s1, const char *s2, size_t n) {
 
 int strcmp(const char *s1, const char *s2) {
   int r = 0;
-  for(size_t i = 0; *s1 && *s2 && r == 0; ++i) {
+  for(size_t i = 0; s1[i] && s2[i] && r == 0; ++i) {
     r = s1[i] - s2[i];
   }
   return r;

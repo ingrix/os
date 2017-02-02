@@ -19,17 +19,17 @@ void _print_mb_message(uint32_t mbflags, uint32_t flag, const char *label) {
 // mboot_info: 32-bit address of where multiboot struct is found in memory
 void multiboot_init(uint32_t mboot_info) {
   uint32_t flags = *((uint32_t*)mboot_info);
-  _print_mb_message(flags, MEM_FLAG, "hi-low mem");
-  _print_mb_message(flags, BOOTDEV_FLAG, "boot device");
-  _print_mb_message(flags, CMDLN_FLAG, "command line");
-  _print_mb_message(flags, MODS_FLAG, "modules");
-  _print_mb_message(flags, SYMS_FLAG, "symbols");
-  _print_mb_message(flags, MMAP_FLAG, "memory map");
-  _print_mb_message(flags, DRIVES_FLAG, "drives");
-  _print_mb_message(flags, CONFTAB_FLAG, "config table");
-  _print_mb_message(flags, BOOTNAME_FLAG, "bootloader name");
-  _print_mb_message(flags, APMTAB_FLAG, "apm");
-  _print_mb_message(flags, VBE_FLAG, "vbe");
+  _print_mb_message(flags, MB_MEM_FLAG, "hi-low mem");
+  _print_mb_message(flags, MB_BOOTDEV_FLAG, "boot device");
+  _print_mb_message(flags, MB_CMDLN_FLAG, "command line");
+  _print_mb_message(flags, MB_MODS_FLAG, "modules");
+  _print_mb_message(flags, MB_SYMS_FLAG, "symbols");
+  _print_mb_message(flags, MB_MMAP_FLAG, "memory map");
+  _print_mb_message(flags, MB_DRIVES_FLAG, "drives");
+  _print_mb_message(flags, MB_CONFTAB_FLAG, "config table");
+  _print_mb_message(flags, MB_BOOTNAME_FLAG, "bootloader name");
+  _print_mb_message(flags, MB_APMTAB_FLAG, "apm");
+  _print_mb_message(flags, MB_VBE_FLAG, "vbe");
   return;
 }
 

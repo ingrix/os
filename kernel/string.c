@@ -1,5 +1,6 @@
 #include <string.h>
 
+/*
 // memset which sets memory in 4-byte chunks
 void *memset(void *dest, int c, size_t n) {
   uint32_t c8 = (uint32_t)c;
@@ -153,3 +154,4 @@ int strcmp(const char *s1, const char *s2) {
   }
   return r;
 }
+*/

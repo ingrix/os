@@ -56,6 +56,7 @@ void *memcpy_simple(void *dest, const void *src, size_t n) {
     *((uint8_t*)dest++) = *((uint8_t*)src++);
   } return dest; 
 }
+*/
 
 // memmove which reads in 32-byte chunks
 void *memmove(void *dest, void *src, size_t n) {
@@ -103,6 +104,7 @@ void *memmove(void *dest, void *src, size_t n) {
   return dest;
 }
 
+/*
 // single-byte-operation memmove
 void *memmove_simple(void *dest, void *src, size_t n) {
   uint8_t *dptr = dest, *sptr = src, inc = 1;

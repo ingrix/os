@@ -7,6 +7,10 @@
 #define VGA_ADDR (uint16_t*)0xB8000
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
+
+#define VGA_LINE_LEN 160 // bytes per line
+#define VGA_MEM_SIZE VGA_WIDTH*VGA_HEIGHT*sizeof(uint16_t)
+
 #define TERM_DEFAULT_FG 0x0F
 #define TERM_DEFAULT_BG 0x00
 
@@ -14,6 +18,9 @@
 #define VGA_BG(x) ((x) & 0xF)
 
 #define VGA_DEFAULT_COLOR vga_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK)
+
+#define VGA_TERM_MODE_WRAP    0 // wraps text to top of screen when at bottom
+#define VGA_TERM_MODE_SCROLL  1 // moves text up and frees a new line 
 
 enum vga_color {
 	VGA_COLOR_BLACK = 0,

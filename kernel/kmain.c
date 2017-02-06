@@ -28,7 +28,7 @@ int kmain(uint32_t magic, uint32_t mboot_info) {
     khang(); // hang
   }
   puts("booting\n");
-
+  
   gdt_init();
   puts("initialized gdt\n");
 

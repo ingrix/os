@@ -4,7 +4,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <printk.h>
+#include <kernel/printk.h>
 
 #ifdef __linux__
 #error "Cross compiler is needed to build this kernel"
@@ -14,10 +14,11 @@
 #error "Compiler must be for i686 arch"
 #endif
 
-#include <boot.h>
-#include <vga.h>
-#include <string.h>
-#include <multiboot.h>
+#include <kernel/arch/x86/boot.h>
+#include <kernel/arch/x86/gdt.h>
+#include <kernel/vga.h>
+#include <kernel/string.h>
+#include <kernel/multiboot.h>
 
 int kmain(uint32_t magic, uint32_t mboot_info) {
   vga_term_init();
@@ -26,9 +27,13 @@ int kmain(uint32_t magic, uint32_t mboot_info) {
     printk("kernel must be booted with multiboot! hanging.");
     khang(); // hang
   }
-
   puts("booting\n");
+
+  gdt_init();
+  puts("initialized gdt\n");
+
   multiboot_init(mboot_info);
+
 
   return 0;
 }

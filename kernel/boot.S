@@ -34,7 +34,7 @@ _start:
   
   pushl %ebx # multiboot information struct
   pushl %eax # multiboot magic number, if multiboot
-  call kmain
+  call kmain # should not return
 
   cli
 khang:

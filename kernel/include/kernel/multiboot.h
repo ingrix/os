@@ -1,7 +1,7 @@
 #ifndef __K_MULTIBOOT_H__
 #define __K_MULTIBOOT_H__
 
-#include <kernel.h>
+#include <kernel/kernel.h>
 
 #define MULTIBOOT_MAGIC 0x2BADB002
 
@@ -78,7 +78,7 @@ struct multiboot_info {
     uint32_t interface_off;
     uint32_t interface_len;
   } vbe;
-};
+}__attribute((packed));
 
 #define MB_MEMORY_AVAIL 1
 #define MB_MEMORY_RES 2

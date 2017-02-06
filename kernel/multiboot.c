@@ -1,6 +1,6 @@
-#include <vga.h>
-#include <printk.h>
-#include <multiboot.h>
+#include <kernel/vga.h>
+#include <kernel/printk.h>
+#include <kernel/multiboot.h>
 
 // magic: value in eax passed to the kernel from the bootloader
 int multiboot_check(uint32_t magic) {

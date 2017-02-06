@@ -1,7 +1,7 @@
-#include <kernel.h>
+#include <kernel/kernel.h>
 #include <stdarg.h>
-#include <printk.h>
-#include <vga.h>
+#include <kernel/printk.h>
+#include <kernel/vga.h>
 
 void putchar(int c) {
   vga_putchar(c);

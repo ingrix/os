@@ -1,5 +1,5 @@
-#include <string.h>
-#include <vga.h>
+#include <kernel/string.h>
+#include <kernel/vga.h>
 
 static size_t term_row;
 static size_t term_col;

@@ -1,8 +1,9 @@
 #ifndef __K_VGA_H__
 #define __K_VGA_H__
 
-#include <kernel.h>
+#include <kernel/kernel.h>
 
+//#define VGA_ADDR (uint16_t*)0xB8000
 #define VGA_ADDR (uint16_t*)0xB8000
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25

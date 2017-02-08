@@ -11,6 +11,4 @@
 #define MAX(x,y) ((x) > (y) ? (x) : (y))
 #define MIN(x,y) ((x) < (y) ? (x) : (y))
 
-#define PAGE_SIZE 4096
-
 #endif // __K_KERNEL_H__

@@ -1,3 +1,4 @@
+#include <kernel/mm.h>
 #include <kernel/printk.h>
 #include <kernel/arch/x86/gdt.h>
 #include <kernel/string.h>

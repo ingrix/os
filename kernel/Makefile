@@ -12,8 +12,8 @@ endif
 
 # standalone arguments
 INC					:= -I./include/
-SA_CFLAGS 	:= -c -std=gnu99 -ffreestanding -O2 -Wall -Wextra $(INC) $(DEBUGFLAGS) 
-SA_LDFLAGS 	:= 
+SA_CFLAGS 	:= -std=gnu99 -ffreestanding -O2 -Wall -Wextra -nostdlib $(INC) $(DEBUGFLAGS) 
+SA_LDFLAGS 	:= -lgcc -static-libgcc
 
 # objects to build
 KERN_NAME := kernel
@@ -26,20 +26,20 @@ S_OBJS				:= $(patsubst %.S,%.o,$(wildcard *.S))
 OBJS 					:= $(ORDERED_OBJS) $(filter-out $(ORDERED_OBJS),$(C_OBJS) $(S_OBJS))
 LDSCRIPT 			:= $(KERN_NAME).ld
 
-all: $(KERN) $(SA_FLAGS) $(LD_FLAGS)
+all: $(KERN)
 
 $(KERN): $(OBJS)
-	$(LD) -T $(LDSCRIPT) -o $@ $^
+	$(CC) -T $(LDSCRIPT) $(SA_CFLAGS)$(SA_LDFLAGS) -o $@ $^
 
 %.o: %.S 
-	$(CC) $(SA_CFLAGS)$(SA_LDFLAGS) -o $@ $<
+	$(CC) -c $(SA_CFLAGS)$(SA_LDFLAGS) -o $@ $<
 	@#$(AS) -o $@ $<
 
 %.o: %.c include/%.h
-	$(CC) $(SA_CFLAGS)$(SA_LDFLAGS) -o $@ $<
+	$(CC) -c $(SA_CFLAGS)$(SA_LDFLAGS) -o $@ $<
 
 %.o: %.c 
-	$(CC) $(SA_CFLAGS)$(SA_LDFLAGS) -o $@ $<
+	$(CC) -c $(SA_CFLAGS)$(SA_LDFLAGS) -o $@ $<
 
 .PHONY: clean
 clean:

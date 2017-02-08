@@ -28,10 +28,12 @@ void printk(const char *fmt, ...) {
     char *p;
     ++c;
     switch(*c) {
+      case 'p' :
+        putchar('0');
+        putchar('x');
       case 'x' :
       case 'd' :
       case 'u' :
-      case 'p' :
         itoa(buf, *c, va_arg(va, int));
         p = buf;
         ++c;
@@ -50,8 +52,8 @@ void printk(const char *fmt, ...) {
   va_end(va);
 }
 
-void itoa(char *buf, int base, int d) {
-  unsigned long ud = d;
+void itoa(char *buf, int base, int64_t d) {
+  uint64_t ud = d;
   unsigned short n = 0;
   int divisor = 16;
   char *p = buf, tmp;
@@ -71,7 +73,7 @@ void itoa(char *buf, int base, int d) {
 
   do {
     int remainder = ud % divisor;
-    *p++ = (remainder < 10) ? remainder + '0' : remainder + '0' - 10;
+    *p++ = (remainder < 10) ? remainder + '0' : remainder + 'a' - 10;
     ++n;
   } while(ud /= divisor);
 
@@ -82,11 +84,6 @@ void itoa(char *buf, int base, int d) {
     }
   }
 
-  // add hex prefix
-  if(divisor == 16) {
-    *p++ = 'x';
-    *p++ = '0';
-  }
   *p = 0;
 
   // characters are small->big so reverse buffer

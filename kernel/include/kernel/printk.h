@@ -6,6 +6,6 @@
 void putchar(int c);
 void puts(const char *buf);
 void printk(const char *fmt, ...);
-void itoa(char *buf, int base, int d); // value to string
+void itoa(char *buf, int base, int64_t d); // value to string
 
 #endif // __K_PRINTK_H__

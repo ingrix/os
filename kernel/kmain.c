@@ -19,6 +19,7 @@
 #include <kernel/vga.h>
 #include <kernel/string.h>
 #include <kernel/multiboot.h>
+#include <kernel/mm.h>
 
 int kmain(uint32_t magic, uint32_t mboot_info) {
   vga_term_init();
@@ -28,12 +29,11 @@ int kmain(uint32_t magic, uint32_t mboot_info) {
     khang(); // hang
   }
   puts("booting\n");
-  
+
   gdt_init();
   puts("initialized gdt\n");
-
   multiboot_init(mboot_info);
-
+  mm_init();
 
   return 0;
 }

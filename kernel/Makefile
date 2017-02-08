@@ -29,17 +29,17 @@ LDSCRIPT 			:= $(KERN_NAME).ld
 all: $(KERN)
 
 $(KERN): $(OBJS)
-	$(CC) -T $(LDSCRIPT) $(SA_CFLAGS)$(SA_LDFLAGS) -o $@ $^
+	$(CC) -T $(LDSCRIPT) $(SA_CFLAGS) -o $@ $^ $(SA_LDFLAGS)
 
 %.o: %.S 
-	$(CC) -c $(SA_CFLAGS)$(SA_LDFLAGS) -o $@ $<
+	$(CC) -c $(SA_CFLAGS) -o $@ $< $(SA_LDFLAGS) 
 	@#$(AS) -o $@ $<
 
 %.o: %.c include/%.h
-	$(CC) -c $(SA_CFLAGS)$(SA_LDFLAGS) -o $@ $<
+	$(CC) -c $(SA_CFLAGS) -o $@ $< 
 
 %.o: %.c 
-	$(CC) -c $(SA_CFLAGS)$(SA_LDFLAGS) -o $@ $<
+	$(CC) -c $(SA_CFLAGS) -o $@ $< $(SA_LDFLAGS)
 
 .PHONY: clean
 clean:

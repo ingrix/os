@@ -1,4 +1,4 @@
-#include <kernel/string.h>
+#include <string.h>
 
 /*
 // memset which sets memory in 4-byte chunks

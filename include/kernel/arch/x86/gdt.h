@@ -2,7 +2,7 @@
 #define __K_GDT_H__
 
 #ifndef __ASSEMBLER__
-#include <kernel/kernel.h>
+#include <kernel.h>
 
 #ifdef __i386__
 struct _gdt_descriptor {

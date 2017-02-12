@@ -1,6 +1,6 @@
-#include <kernel/string.h>
-#include <kernel/vga.h>
-#include <kernel/iorw.h>
+#include <string.h>
+#include <vga.h>
+#include <io.h>
 
 static size_t term_row;
 static size_t term_col;

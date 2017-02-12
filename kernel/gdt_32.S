@@ -1,4 +1,4 @@
-#include <kernel/arch/x86/gdt.h>
+#include <arch/x86/gdt.h>
 
 .section .text
 .global load_gdt_32

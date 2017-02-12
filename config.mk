@@ -1,0 +1,4 @@
+ARCH := x86_64
+BITS := 64
+DEBUG := 1
+

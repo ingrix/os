@@ -1,7 +1,7 @@
-#include <kernel/mm.h>
-#include <kernel/printk.h>
-#include <kernel/arch/x86/gdt.h>
-#include <kernel/string.h>
+#include <mm.h>
+#include <tty.h>
+#include <arch/x86/gdt.h>
+#include <string.h>
 
 struct gdt_ptr {
   uint16_t limit;

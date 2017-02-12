@@ -1,7 +1,7 @@
 #ifndef __K_PRINTK_H__
 #define __K_PRINTK_H__
 
-#include <kernel/kernel.h>
+#include <kernel.h>
 
 void putchar(int c);
 void puts(const char *buf);

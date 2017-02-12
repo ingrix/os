@@ -1,7 +1,7 @@
-#include <kernel/kernel.h>
-#include <kernel/iorw.h>
+#include <kernel.h>
+#include <io.h>
 
-uint8_t ior_byte(uint16_t port) {
+uint8_t inb(uint16_t port) {
   uint8_t b;
   asm("movw %1, %%dx \n\t"
       "inb %%dx \n\t"
@@ -12,7 +12,7 @@ uint8_t ior_byte(uint16_t port) {
   return b;
 }
 
-void iow_byte(uint16_t port, uint8_t byte) {
+void outb(uint16_t port, uint8_t byte) {
   asm("movw %0, %%dx \n\t"
       "movb %1, %%al \n\t"
       "outb %%dx \n\t"

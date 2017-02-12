@@ -1,7 +1,7 @@
 #ifndef __K_STRING_H__
 #define __K_STRING_H__
 
-#include <kernel/kernel.h>
+#include <kernel.h>
 
 #define memcpy __builtin_memcpy
 #define memset __builtin_memset

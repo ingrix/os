@@ -1,7 +1,7 @@
-#include <kernel/vga.h>
-#include <kernel/printk.h>
-#include <kernel/multiboot.h>
-#include <kernel/string.h>
+#include <vga.h>
+#include <tty.h>
+#include <multiboot.h>
+#include <string.h>
 
 static struct multiboot_info g_mb_info = {0};
 

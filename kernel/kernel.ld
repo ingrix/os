@@ -37,6 +37,11 @@ SECTIONS
 		*(COMMON)
 		*(.bss)
 	}
+
+  .pgtbl BLOCK(4K) : ALIGN(4K)
+  {
+    *(.pgtbl)
+  }
   _kern_end = .;
 
 	/* The compiler may produce other sections, by default it will put them in

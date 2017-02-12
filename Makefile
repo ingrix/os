@@ -1,5 +1,8 @@
 
+srcroot := $(PWD)
 subdirs=kernel
+
+export srcroot
 
 .PHONY: all
 all: kernel

@@ -1,0 +1,43 @@
+.set VGA_ADDR, 0xB8000
+.set VGA_ADDR_END, (0xB8000 + 80 * 25 * 2)
+
+.align 4
+.section .text
+# msg passed in edi
+# row passed in esi
+# col passed in edx
+.globl print_msg
+.type print_msg, @function
+print_msg:
+  pushl %ebp
+  movl %esp, %ebp
+  xchgl %edi, %esi # move message to src
+  # edi = row edx = col esi = msg
+  shl $1, %edx # each char is 2 bytes, mult rdx by 2 to get byte# of column
+  imul $160, %edi # 160 bytes per row
+  addl %edx, %edi # edi now stores byte position of character to write to
+  addl $VGA_ADDR, %edi # edx now stores the memory position of character info
+
+  # black background, white foreground
+  movb $0xF0, %ah
+
+  cld
+.Lloadchar:
+  cmpl $VGA_ADDR_END, %edi
+  jge .Lwrap
+1:
+  lodsb # move byte from msg to %al
+  cmpb $0, %al
+  jz .Lend
+
+  stosw
+  jmp .Lloadchar
+
+.Lwrap: 
+  subl $(80*25*2), %edi
+  jmp 1b
+
+.Lend:
+  popl %ebp
+  ret
+

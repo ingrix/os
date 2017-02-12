@@ -4,7 +4,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <kernel/printk.h>
+#include <tty.h>
 
 #ifdef __linux__
 #error "Cross compiler is needed to build this kernel"
@@ -14,12 +14,12 @@
 #error "Compiler must be for i686 arch"
 #endif
 
-#include <kernel/arch/x86/boot.h>
-#include <kernel/arch/x86/gdt.h>
-#include <kernel/vga.h>
-#include <kernel/string.h>
-#include <kernel/multiboot.h>
-#include <kernel/mm.h>
+#include <arch/x86/boot.h>
+#include <arch/x86/gdt.h>
+#include <vga.h>
+#include <string.h>
+#include <multiboot.h>
+#include <mm.h>
 
 int kmain(uint32_t magic, uint32_t mboot_info) {
   vga_term_init();

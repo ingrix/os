@@ -1,3 +1,6 @@
+srcroot ?= $(dir $(PWD))
+include $(srcroot)/config.mk
+
 TARGET := i686-elf
 AS := $(TARGET)-as
 LD := $(TARGET)-ld
@@ -11,13 +14,19 @@ ifneq ($(filter $(DEBUG),1 y Y on ON),)
 endif
 
 # standalone arguments
-INC					:= -I./include/
-SA_CFLAGS 	:= -std=gnu99 -ffreestanding -O2 -Wall -Wextra -nostdlib $(INC) $(DEBUGFLAGS) 
-SA_LDFLAGS 	:= -lgcc -static-libgcc
+KERN_INCLUDES := -I$(srcroot)/include/kernel/ -I$(PWD)/include/
+KERN_CFLAGS 	:= -std=gnu99 -ffreestanding -O2 -Wall -Wextra -nostdlib $(KERN_INCLUDES) $(DEBUGFLAGS) 
+KERN_LDFLAGS 	:= -lgcc -static-libgcc
+
+export KERN_CFLAGS KERN_LDFLAGS
 
 # objects to build
 KERN_NAME := kernel
-KERN 			:= $(KERN_NAME).bin
+KERN 			:= $(KERN_NAME).elf
+KERN_SYMS := $(KERN_NAME).syms
+
+export KERN_NAME
+
 #
 # the order of these is important
 ORDERED_OBJS 	:= boot.o
@@ -26,26 +35,36 @@ S_OBJS				:= $(patsubst %.S,%.o,$(wildcard *.S))
 OBJS 					:= $(ORDERED_OBJS) $(filter-out $(ORDERED_OBJS),$(C_OBJS) $(S_OBJS))
 LDSCRIPT 			:= $(KERN_NAME).ld
 
-all: $(KERN)
+subtargets := boot
 
-$(KERN): $(OBJS)
-	$(CC) -T $(LDSCRIPT) $(SA_CFLAGS) -o $@ $^ $(SA_LDFLAGS)
+all: $(KERN) FORCE
+
+$(KERN): $(targets) $(OBJS)
+	$(CC) -T $(LDSCRIPT) $(KERN_CFLAGS) -o $@ $^ $(KERN_LDFLAGS)
 
 %.o: %.S 
-	$(CC) -c $(SA_CFLAGS) -o $@ $< $(SA_LDFLAGS) 
+	$(CC) -c $(KERN_CFLAGS) -o $@ $< $(KERN_LDFLAGS) 
 	@#$(AS) -o $@ $<
 
 %.o: %.c include/%.h
-	$(CC) -c $(SA_CFLAGS) -o $@ $< 
+	$(CC) -c $(KERN_CFLAGS) -o $@ $< 
 
 %.o: %.c 
-	$(CC) -c $(SA_CFLAGS) -o $@ $< $(SA_LDFLAGS)
+	$(CC) -c $(KERN_CFLAGS) -o $@ $< $(KERN_LDFLAGS)
+
+ksyms: $(KERN_SYMS)
+
+$(KERN_SYMS): $(KERN)
+	objcopy --only-keep-debug $(KERN) $(KERN_SYMS)
+
+$(subtargets):
+	$(MAKE) $(build_dir)=$@
 
 .PHONY: clean
 clean:
-	rm -f *.o $(OBJS) $(KERN)
+	rm -f *.o $(OBJS) $(KERN) $(KERN_SYMS)
 
 .PHONY: help
 help:
-	@echo "barebones kernel v. 0.1
+	@echo "kernel v. 0.1
 	help!"

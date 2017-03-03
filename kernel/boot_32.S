@@ -12,16 +12,22 @@
 .section .multiboot, "a"
 
 # mark these as local so that they don't show up in the damn ELF file
-.set .L_mb_magic, 0xE85250D6
+.set mb_magic, 0xE85250D6
 .set .L_mb_arch, 0x0;
 .set .L_mb_len, .L_mb_end - .L_mb_start
-.set .L_mb_chksm, -(.L_mb_magic + .L_mb_arch + .L_mb_len);
+.set .L_mb_chksm, -(mb_magic + .L_mb_arch + .L_mb_len);
+.global mb_magic
 
 .L_mb_start:
-MB_MAGIC: .long .L_mb_magic
+MB_MAGIC: .long mb_magic
 MB_ARCH: .long .L_mb_arch
 MB_LEN: .long .L_mb_len
 MB_CHKSUM: .long .L_mb_chksm
+
+# alignment tag
+.short 0x6 # alignment tag type
+.short 0x0 # not optional
+.long 0x8 # 8-byte tag.  spec says size=12, may be error?
 
 # empty tag
 .short 0
@@ -29,9 +35,12 @@ MB_CHKSUM: .long .L_mb_chksm
 .long 0x08
 .L_mb_end:
 
-.section .init.data, "aw", @progbits
+.section .init.rodata, "a", @progbits
 
-.Lnolmmsg: .asciz "cannot switch to long mode"
+.Lnolmmsg: .asciz "cannot switch to long mode\r\n"
+.Lnomberrmsg: .asciz "multiboot loader not used, cannot boot\r\n"
+.Lmbokmsg: .asciz "multiboot loader was used, booting\r\n"
+.Lrebootmsg: .asciz "please reboot...\r\n"
 
 .align 16
 _init_gdt:
@@ -86,69 +95,170 @@ _init_stackbottom:
 .skip 16384
 _init_stacktop:
 
+.global _serialport
+_serialport: .skip 2
+
+.global _mb_info_ptr # pointer to multiboot information
+_mb_info_ptr: .skip 8
+
 .section .init.text, "ax"
-.global _start
-.type _start, @function
+.global _start32
+.type _start32, @function
 
-.set _vga_addr, 0xB8000
+.global COM1
+.global COM2
+.global COM3
+.global COM4
 
-_start:
+.set COM1, 0x3F8
+.set COM2, 0x2F8
+.set COM3, 0x3E8
+.set COM4, 0x2E8
+
+_start32:
   mov $_init_stacktop, %esp
+  mov %esp, %ebp
+
   cli
-  
+
   pushl %ebx # multiboot information struct
   pushl %eax # multiboot magic number, if multiboot
 
-  call clear_vga
+  call setup_early_logger_32
 
-  call lm_check
+  popl %eax
+  
+  # initial check to ensure multiboot loader was used
+  #cmpl $0x36d76289, %eax
+  cmpl $0x36d76289, %eax
+  jne .L_nomberr
+
+  popl %eax # multiboot 
+  movl %eax, _mb_info_ptr
+
+  pushl $.Lmbokmsg
+  call write_early_log_32
+  addl $4, %esp
+
+  call lm_check_32
   test %eax, %eax
   jnz .L_nolmerr
 
   # from here we won't return
-  jmp _start64
+  jmp enter_long_mode 
+
+.L_nomberr:
+  pushl $.Lnomberrmsg
+  call write_early_log_32
+  addl $4, %esp
+  jmp .Lkhang
 
 .L_nolmerr:
   pushl $.Lnolmmsg
-  call print_boot_msg
+  call write_early_log_32
+  addl $4, %esp
 
 .Lkhang:
+  pushl $.Lrebootmsg
+  call write_early_log_32
+  addl $4, %esp
+1:
   cli
   hlt
-  jmp .Lkhang
+  jmp 1b
 
-print_boot_msg:
-  movl $_vga_addr, %edi
-  movl 4(%esp), %esi
-  movb $0x0F, %ah # white foreground, black background
-  lodsb
+setup_early_logger_32:
+
+  # maybe this is a dumb way to do this?
+  movw $COM1, %dx
+  movw %dx, _serialport
+  addw $0x7, %dx # scratch register
+  call .Ltestcom
+  test %eax, %eax
+  jz 1f
+
+  movw $COM2, %dx
+  movw %dx, _serialport
+  addw $0x7, %dx # scratch register
+  call .Ltestcom
+  test %eax, %eax
+  jz 1f
+
+  movw $COM3, %dx
+  movw %dx, _serialport
+  addw $0x7, %dx # scratch register
+  call .Ltestcom
+  test %eax, %eax
+  jz 1f
+
+  movw $COM4, %dx
+  movw %dx, _serialport
+  addw $0x7, %dx # scratch register
+  call .Ltestcom
+  test %eax, %eax
+  jnz 2f
+
 1:
+  movw _serialport, %dx
+  
+  # set the DLAB to 0 to make sure we write data
+  addw $3, %dx
+  inb %dx
+  andb $0x7F, %al
+  outb %dx
+
+  ret
+2:
+  movw $0, _serialport
+  ret
+
+.Ltestcom:
+  movb $0x42, %al # arbitrary value
+  outb %dx
+  xorb %al, %al
+  inb %dx
+  cmpb $0x42, %al
+  je 1f
+  movl $-1, %eax
+  ret
+1:
+  xorl %eax, %eax
+  ret
+  
+
+write_early_log_32:
+  movw _serialport, %dx
+  testw %dx, %dx
+  jz 2f
+
+  movl 4(%esp), %esi
+1:
+  lodsb
   testb %al, %al
   jz 2f
-  stosw
-  lodsb
+  outb %dx
   jmp 1b
 2:
   ret
 
-/* int _start64() */
+/* int enter_long_mode() */
 /* return 0 if ok, -1 otherwise */
-_start64:
+enter_long_mode:
 
   # disable paging (should be disabled already if multiboot used)
   movl %cr0, %eax
   andl $0x7FFFFFFF, %eax
   movl %eax, %cr0
 
-  call setup_bootstrap_pgtbl
-  call enable_lm
-  call setup_gdt
+  call setup_bootstrap_pgtbl_32
+  call enable_lm_32
+  call setup_gdt_32
 
-  ljmp $gdt.kern_cs64, $lm_activate # transition to 64-bit code
+  ljmp $gdt.kern_cs64, $.Llm_activate # transition to 64-bit code
 
-/* int lm_check() */
+/* int lm_check_32() */
 /* return: 0 if ok, -1 otherwise */
-lm_check:
+lm_check_32:
   # let's save ebx
   pushl %ebx
 
@@ -184,10 +294,10 @@ lm_check:
   popl %ebx
   ret
 
-/* void setup_bootstrap_pgtbl()
+/* void setup_bootstrap_pgtbl_32()
     sets up enough info to get into long mode where the rest of initialization
     can take place */
-setup_bootstrap_pgtbl:
+setup_bootstrap_pgtbl_32:
 
   # zero out the page tables
   xor %eax, %eax
@@ -195,11 +305,17 @@ setup_bootstrap_pgtbl:
   movl $_ktables_len, %ecx
   rep stosb
 
-  # map first 8M of memory into 2MB pages
-  movl $(_pd_0 - _KTEXT_BASE), %edi
+  # determine number of 2M pages we need to cover the whole kernel space
+  movl $(_kern_end - _KTEXT_BASE), %ecx
+  addl $_max_init_heap, %ecx
+  addl $0x200000, %ecx
+  shr $21, %ecx
+  movl %ecx, %edx # save for later
+
+  # map kernel text to the first entries of _pd_ktext
+  movl $(_pd_ktext - _KTEXT_BASE), %edi
   xorl %eax, %eax
-  orl $0x83, %eax # 2MB page, writable, and present
-  movl $4, %ecx # 4 entries, map first 8MB
+  orl $0x81, %eax # 2MB page, read-only, present
 1:
   stosl
   movl $0, (%edi)
@@ -207,22 +323,38 @@ setup_bootstrap_pgtbl:
   addl $0x200000, %eax
   loop 1b
 
-  # set up PDPTEs to point to the PDE we just made
-  movl $(_pd_0 - _KTEXT_BASE), %eax
-  xorl $0x3, %eax # mark as present and writable
+  # also identity map the memory up to the end of the kernel
+  movl $(_pd_0 - _KTEXT_BASE), %edi
+  xorl %eax, %eax
+  orl $0x83, %eax # 2MB page, writable, and present
+  movl %edx, %ecx
+1:
+  stosl
+  movl $0, (%edi)
+  addl $4, %edi
+  addl $0x200000, %eax
+  loop 1b
 
+  # put ktext entry in pdpt
+  movl $(_pd_ktext - _KTEXT_BASE), %eax
+  orl $0x1, %eax # present, read-only
+
+  # place the identity-mapped memory in the pdpt
+  movl $(_pd_0 - _KTEXT_BASE), %eax
+  orl $0x3, %eax 
   movl $(_pdpt_0 - _KTEXT_BASE), %edi
   movl %eax, (%edi) # high order bits should be zero
 
+  # identity-mapped pml4
   movl $(_pdpt_0 - _KTEXT_BASE), %eax
-  orl $0x3, %eax # writable, present
+  orl $0x3, %eax
   movl $(_pml4_0 - _KTEXT_BASE), %edi
   movl %eax, (%edi)
 
   ret
 
-/* void enable_lm() */
-enable_lm:
+/* void enable_lm_32() */
+enable_lm_32:
 
   # set CR0.PAE=1, 
   # setup CR3 with pml4
@@ -259,24 +391,17 @@ enable_lm:
 
   ret
 
-setup_gdt:
+setup_gdt_32:
   pushl $_init_gdt
   pushw $.L_init_gdt_len
   lgdt (%esp)
   addl $6, %esp
   ret
 
-clear_vga:
-  movl $0, %eax
-  movl $_vga_addr, %edi
-  movl $4000, %ecx
-  rep stosl
-  ret
-
 .code64
 
 #.extern kmain
-lm_activate:
+.Llm_activate:
 
   # activate 64-bit data structures
   mov $gdt.kern_ds64, %ax
@@ -284,18 +409,18 @@ lm_activate:
   mov %ax, %ss
   mov %ax, %es
 
-  # get multiboot information
-  movl (%esp), %edi # multiboot magic number
-  movl 4(%esp), %esi # multiboot info pointer
+  # get mb magic (eax) and mb structure address (ebx)
+  xor %rdi, %rdi
+  movq %rdi, %rsi
+  movl (%esp), %edi # we will use sys V abi here
+  movl 4(%esp), %esi
 
   # align the stack to 8-byte boundary
   andq $-16, %rsp
-  jmp 1f
 
-  # Should not return
-  callq kmain
+  jmp setup_kern
 
-1:
-  cli
-  hlt
-  jmp 1b
+_map_ktext:
+  /* add a pdpt and pd for higher-half kernel text/data */
+  movq $_kern_len, %rcx
+  ret

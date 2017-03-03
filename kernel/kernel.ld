@@ -1,6 +1,6 @@
 OUTPUT_FORMAT(elf64-x86-64)
 OUTPUT_ARCH(i386:x86-64)
-ENTRY(_start)
+ENTRY(_start32)
 
 /*
 mb_magic  = 0xE85250D6;
@@ -15,13 +15,14 @@ _krwdata_start = 0;
 _kbss_start = 0;
 */
 _KTEXT_BASE = 0xffffffff80000000;
-_KSPACE_BASE = 0xffff800000000000;
+_KMAP_BASE = 0xffff800000000000;
+_max_init_heap = 0x1000;
 
 SECTIONS
 {
   . = 0x100000;
 
-    /* multiboot header, may set in kernel.ld later */
+    /* multiboot header, uncommpent to set in kernel.ld, but remove from any .S files */
     /*
     mb_start = .;
     LONG(mb_magic)
@@ -38,6 +39,7 @@ SECTIONS
     mb_end = .;
     */
 
+  _kinit_start = .;
   .multiboot :
   {
     *(.multiboot)
@@ -47,6 +49,7 @@ SECTIONS
   .init.text  :
   {
     *(.init.text)
+    *(.init.rodata)
     . = ALIGN(4K);
   }
 
@@ -60,6 +63,8 @@ SECTIONS
     *(.init.bss)
     . = ALIGN(4K);
   }
+  _kinit_end = .;
+  _kinit_len = _kinit_end - _kinit_start;
 
   . += _KTEXT_BASE;
 
@@ -106,18 +111,21 @@ SECTIONS
     /* kernel pml4 */
     _pml4_0 = .;
     . += 0x1000;
+    _pml4_ktext = .;
+    . += 0x1000;
 
     /* PDPT for low-mapped mem and _KTEXT_BASE */
     _pdpt_0 = .; /* pml4 entry 0 */
     . += 0x1000;
-    _pdpt_kern = .; /* pml4 entry 511 */
+    _pdpt_ktext = .;
     . += 0x1000;
 
     /* page directories for low-mapped and kernel text */
+    /* 2M pages */
     _pd_0 = .; /* pdpt entry 0 */
     . += 0x1000;
-    _pd_kern = .; /* pdpt entry 510, -2GB */
-    . += 0x1000;
+    _pd_ktext = .;
+    . += 0x1000; /* 512MB ktext = 0x80 (128) PDEs @ 2MB/PDE */
 
     /*
     _pt_0 = .;
@@ -127,5 +135,7 @@ SECTIONS
   _ktables_end = .;
   _ktables_len = _ktables_end - _ktables_start;
   _kern_end = .;
-
+  _kern_len = _kern_end - _kern_start;
+  . = ALIGN(4K);
+  _heap_start = .;
 }

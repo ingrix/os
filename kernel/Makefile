@@ -33,7 +33,8 @@ KERN_SYMS	:= $(KERN_NAME).syms
 #C_OBJS				:= $(patsubst %.c,%.o,$(wildcard *.c))
 #S_OBJS				:= $(patsubst %.S,%.o,$(wildcard *.S))
 #OBJS 					:= $(ORDERED_OBJS) $(filter-out $(ORDERED_OBJS),$(C_OBJS) $(S_OBJS))
-OBJS					:= boot_32.o kmain.o
+EARLY_OBJS		:= boot_setup.o
+OBJS					:= boot_32.o $(EARLY_OBJS) kmain.o
 LDSCRIPT 			:= $(KERN_NAME).ld
 
 all: kernel

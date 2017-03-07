@@ -1,6 +1,4 @@
 
-#include "page.h"
-
 .extern _serialport
 .extern _mb_info_ptr
 
@@ -11,10 +9,10 @@
 _mb_mmap_info_ptr: .skip 8
 _mb_lowmem_info_ptr: .skip 8
 
-.section .init.text, "ax"
+.section .text, "ax"
 
 # void setup_kern(uint32_t mb_magic, uint32_t mb_info_phys_addr)
-# %edi should contain the mb magic number and %esi should have the multiboot
+# %rdi should contain the mb magic number and %rsi should have the multiboot
 # information physical address
 # stack will be 16-byte aligned on entry to this function
 .global setup_kern
@@ -114,11 +112,6 @@ write_early_log_char:
   jz 1f
   outb %dx
 1:
-  ret
-
-# map the higher-half address to where the kernel is loaded
-_map_kernel_text:
-  movabsq $_KTEXT_BASE, %rax
   ret
 
 .section .init.rodata, "a"

@@ -16,7 +16,7 @@ endif
 # standalone arguments
 INC					:= -I./include/
 
-SA_CFLAGS 	:= -std=gnu99 -ffreestanding -O2 -Wall -Wextra -nostdlib 
+SA_CFLAGS 	:= -std=gnu99 -ffreestanding -O2 -Wall -Wextra -nostdlib
 SA_CFLAGS   += -mno-red-zone 
 SA_CFLAGS   += $(INC) $(DEBUGFLAGS) 
 

@@ -42,8 +42,9 @@ MB_CHKSUM: .long .L_mb_chksm
 .Lmbokmsg: .asciz "multiboot loader was used, booting\r\n"
 .Lrebootmsg: .asciz "please reboot...\r\n"
 
+.section .rodata, "a", @progbits
 .align 16
-_init_gdt:
+_gdt:
 .quad 0x0 # null descriptor
 
 # kernel code 64-bit descriptor.  We don't actually need most of these fields
@@ -78,10 +79,9 @@ _init_gdt:
 .byte   0xCF    # G=4KB, D=1 (32-bit sp), L=NA, AVL=0
 .byte   0x00
 
+_gdt_end:
 
-_init_gdt_end:
-
-.set .L_init_gdt_len, _init_gdt_end - _init_gdt
+.set .L_gdt_len, _gdt_end - _gdt
 
 .set gdt.kern_cs64, 0x08
 .set gdt.kern_ds64, 0x10
@@ -94,6 +94,8 @@ _init_gdt_end:
 _init_stackbottom:
 .skip 16384
 _init_stacktop:
+_init_pml4: .skip 8
+_init_num_page_tables: .skip 8
 
 .global _serialport
 _serialport: .skip 2
@@ -169,7 +171,7 @@ _start32:
 
 setup_early_logger_32:
 
-  # maybe this is a dumb way to do this?
+  # this may be dumb/incorrect?
   movw $COM1, %dx
   movw %dx, _serialport
   addw $0x7, %dx # scratch register
@@ -251,6 +253,7 @@ enter_long_mode:
   movl %eax, %cr0
 
   call setup_bootstrap_pgtbl_32
+  movl %eax, _init_num_page_tables # save number of page tables
   call enable_lm_32
   call setup_gdt_32
 
@@ -298,59 +301,120 @@ lm_check_32:
     sets up enough info to get into long mode where the rest of initialization
     can take place */
 setup_bootstrap_pgtbl_32:
-
-  # zero out the page tables
-  xor %eax, %eax
-  movl $(_ktables_start - _KTEXT_BASE), %edi
-  movl $_ktables_len, %ecx
-  rep stosb
-
-  # determine number of 2M pages we need to cover the whole kernel space
-  movl $(_kern_end - _KTEXT_BASE), %ecx
-  addl $_max_init_heap, %ecx
-  addl $0x200000, %ecx
-  shr $21, %ecx
-  movl %ecx, %edx # save for later
-
-  # map kernel text to the first entries of _pd_ktext
-  movl $(_pd_ktext - _KTEXT_BASE), %edi
+  pushl %ebp
+  movl %esp, %ebp
+  
+  # clear out what will be the PML4, PDPTs, and PD
+  movl $(_heap_start - _KTEXT_BASE), %edi
+  movl $0x1000, %ecx # 4096 bytes/page * 4 bytes/transaction = 4 pages zerod
   xorl %eax, %eax
-  orl $0x81, %eax # 2MB page, read-only, present
+  rep stosl
+
+  # memory layout will look something like this
+  #
+  # |    1M|init|initstack|ktext|pagetables|
+  # determine how many 4K PTEs we'll need to map 0 through _kern_end
+  # + page tables
+  movl $(_init_stack_start - _KTEXT_BASE), %ecx # should be multile of 4K
+  addl $0x4000, %ecx # 16kb stack
+  shr $12, %ecx # PTEs for kernel+stack
+  addl $4, %ecx # PTEs for PML4, 2xPDPT, and PD, should never need more than 1 of
+                # each of these for initial setup (>1GB!)
+
+  # we will have memory laid out:
+  # 0x0 - ... identity mapped page tables
+  # 0xffff800000000000 - ... map of physical memory
+  # 0xffffffff80000000 - ... map of kernel text
+  # 
+  # initially this will just contain all memory up to the end of the kernel
+  # including the page tables
+  #
+  # To do this we will need mappings starting with:
+  # PML4    PDPT    PD    PT
+  # 0x0     0x0     0x0   0x0
+  # 0x100   0x0     0x0   0x0
+  # 0x1FF   0x1FE   0x0   0x0
+  #
+  # this will therefore require 1 PML4, 2 PDPTs, 1 PD, and however many PTs we need to
+  # map the initial memory
+
+  # address the first page table
+  movl $(_heap_start - _KTEXT_BASE + 4 * 4096), %edi
+  pushl $0 # 0 page tables
+  movl $0x3, %eax # writable and present
+
+  cld # increase address
+
+1:
+  movl %edi, %edx
+  andl $0x1FF, %edx
+  test %edx, %edx
+  jnz 2f 
+
+  # written a multiple of 512 PTEs, need an additional page table
+  addl $1, %ecx # add 1 PTE to keep track of it
+  popl %edx
+  addl $1, %edx
+  pushl %edx
+
+2:
+  stosl
+  movl $0, (%edi)
+  addl $4, %edi
+  addl $0x1000, %eax
+  loop 1b
+
+  # fill in the remainder of the page table with zeros
+  movl %edi, %ecx
+  andl $0xFFF, %ecx
+  subl $0x1000, %ecx
+  negl %ecx
+  shr $2, %ecx
+  xorl %eax, %eax
+  rep stosl
+
+  # add PT entries to PD
+  popl %ecx # number of page tables that were written
+  pushl %ecx
+
+  movl $(_heap_start - _KTEXT_BASE + 4 * 4096), %eax # first page table
+  orl $0x3, %eax # present, writable
+  movl $(_heap_start - _KTEXT_BASE + 3 * 4096), %edi # page directory
 1:
   stosl
   movl $0, (%edi)
   addl $4, %edi
-  addl $0x200000, %eax
+  addl $0x1000, %eax
   loop 1b
 
-  # also identity map the memory up to the end of the kernel
-  movl $(_pd_0 - _KTEXT_BASE), %edi
-  xorl %eax, %eax
-  orl $0x83, %eax # 2MB page, writable, and present
-  movl %edx, %ecx
-1:
-  stosl
-  movl $0, (%edi)
-  addl $4, %edi
-  addl $0x200000, %eax
-  loop 1b
-
-  # put ktext entry in pdpt
-  movl $(_pd_ktext - _KTEXT_BASE), %eax
-  orl $0x1, %eax # present, read-only
-
-  # place the identity-mapped memory in the pdpt
-  movl $(_pd_0 - _KTEXT_BASE), %eax
-  orl $0x3, %eax 
-  movl $(_pdpt_0 - _KTEXT_BASE), %edi
-  movl %eax, (%edi) # high order bits should be zero
-
-  # identity-mapped pml4
-  movl $(_pdpt_0 - _KTEXT_BASE), %eax
+  # add PD entry to the two PDPTs
+  movl $(_heap_start - _KTEXT_BASE + 3 * 4096), %eax # page directory
   orl $0x3, %eax
-  movl $(_pml4_0 - _KTEXT_BASE), %edi
-  movl %eax, (%edi)
+  movl $(_heap_start - _KTEXT_BASE + 4096), %edi # beginning of first PDPT
+  stosl
+  movl $0, (%edi)
+  movl $(_heap_start - _KTEXT_BASE + 2 * 4096 + 0x1FE * 8), %edi # end of second PDPT
+  stosl
+  movl $0, (%edi)
 
+  # add PDPT entries to the PML4
+  movl $(_heap_start - _KTEXT_BASE), %edi
+  movl $(_heap_start - _KTEXT_BASE + 4096), %eax
+  orl $0x3, %eax
+  stosl
+  movl $0, (%edi)
+
+  movl $(_heap_start - _KTEXT_BASE + 0x100 * 8), %edi
+  stosl
+  movl $0, (%edi)
+  movl $(_heap_start - _KTEXT_BASE + 0x1FF * 8), %edi
+  movl $(_heap_start - _KTEXT_BASE + 2 * 4096), %eax
+  orl $0x3, %eax
+  stosl
+  movl $0, (%edi)
+
+  popl %eax # number of page tables that were written
+  popl %ebp
   ret
 
 /* void enable_lm_32() */
@@ -361,7 +425,7 @@ enable_lm_32:
   # set EFER.LME=1 in MSR 0xC0000080
 
   # make pml4 available
-  movl $(_pml4_0 - _KTEXT_BASE), %eax
+  movl $(_heap_start - _KTEXT_BASE), %eax
   movl %eax, %cr3
 
   # enable PAE and PSE
@@ -392,8 +456,8 @@ enable_lm_32:
   ret
 
 setup_gdt_32:
-  pushl $_init_gdt
-  pushw $.L_init_gdt_len
+  pushl $(_gdt - _KTEXT_BASE)
+  pushw $.L_gdt_len
   lgdt (%esp)
   addl $6, %esp
   ret
@@ -415,12 +479,9 @@ setup_gdt_32:
   movl (%esp), %edi # we will use sys V abi here
   movl 4(%esp), %esi
 
-  # align the stack to 8-byte boundary
-  andq $-16, %rsp
+  # set the stack to the kernel-mode address
+  movq $_init_stack_start, %rsp
 
-  jmp setup_kern
-
-_map_ktext:
-  /* add a pdpt and pd for higher-half kernel text/data */
-  movq $_kern_len, %rcx
+  # jump to higher half code
+  pushq $setup_kern
   ret
